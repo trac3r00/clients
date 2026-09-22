@@ -65,7 +65,6 @@ import { DurationShortPipe } from "../date/duration-short.pipe";
 /** The fields the toolbar filters against, carried by both sections' row models. */
 type FilterableRow = { searchText: string; collectionName: string | null; requester: string };
 
-/** The toolbar's three filters, resolved to what a row is tested against. */
 type ApprovalsFilter = { term: string; collection: string | null; requester: string | null };
 
 /**
@@ -379,7 +378,6 @@ export class ApprovalsTabComponent {
     });
   }
 
-  /** The toolbar's three filters, read from the controls this component holds. */
   private readonly filterInputs = computed<ApprovalsFilter>(() => ({
     term: this.searchTerm().trim().toLowerCase(),
     collection: this.collectionFilter() ?? null,
@@ -455,7 +453,6 @@ function mediaQuerySignal(query: string): Signal<boolean> {
   return matches.asReadonly();
 }
 
-/** Whether a row survives the toolbar's three filters. */
 function matchesFilter(row: FilterableRow, filter: ApprovalsFilter): boolean {
   return (
     (filter.term === "" || row.searchText.includes(filter.term)) &&
@@ -464,7 +461,6 @@ function matchesFilter(row: FilterableRow, filter: ApprovalsFilter): boolean {
   );
 }
 
-/** The table's keyed filter values, resolved to what {@link matchesFilter} tests against. */
 function toApprovalsFilter(values: ApprovalsFilterValues): ApprovalsFilter {
   return {
     term: typeof values.search === "string" ? values.search.trim().toLowerCase() : "",
