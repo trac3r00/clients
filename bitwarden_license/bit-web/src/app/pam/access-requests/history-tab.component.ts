@@ -37,6 +37,7 @@ import {
   BitHeaderCellComponent,
   BitHeaderRowComponent,
   BitRowComponent,
+  BitTableToolbarComponent,
   BitTableV2Component,
   ButtonModule,
   FILTER_CONTROL,
@@ -101,6 +102,7 @@ const announcementHoldMs = 2000;
     BitHeaderCellComponent,
     BitHeaderRowComponent,
     BitRowComponent,
+    BitTableToolbarComponent,
     BitTableV2Component,
     ButtonModule,
     FilterMenuModule,
@@ -142,8 +144,10 @@ export class HistoryTabComponent {
 
   /**
    * `bit-filter-menu` isn't a `ControlValueAccessor`, so the chip owns its selection and is read
-   * through its `FILTER_CONTROL` contract rather than a form control. There is no filter host for
-   * it to register with, so this `viewChild` is the whole of the plumbing.
+   * through its `FILTER_CONTROL` contract rather than a form control. On the VFO1 path the chip
+   * sits in the table's toolbar and so also registers with the table, but the scope picks which
+   * list the table is handed rather than narrowing one, so this `viewChild` stays the plumbing on
+   * both paths and the table is given no `[filter]`.
    */
   private readonly scopeChip = viewChild("historyScopeFilter", { read: FILTER_CONTROL });
 
@@ -251,6 +255,16 @@ export class HistoryTabComponent {
    * whom the privilege predicate does not recognize as an approver.
    */
   protected readonly canSwitchScope = computed(() => this.canApprove() || this.hasManagedHistory());
+
+  /**
+   * Whether the VFO1 path draws the table. It is held up over an empty result whenever the scope
+   * chip is offered, because the chip lives in the table's toolbar: letting the table go would
+   * destroy the chip, and {@link scope} reads the chip, so the scope would snap back to All and
+   * refill the table the reader had just emptied.
+   */
+  protected readonly vfo1TableVisible = computed(
+    () => this.vfo1Enabled() && (this.canSwitchScope() || this.historyRows().length > 0),
+  );
 
   /**
    * One source of truth for the scope — the shape the sibling access-audit page uses for its
