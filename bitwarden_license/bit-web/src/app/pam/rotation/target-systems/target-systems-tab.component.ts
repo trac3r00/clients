@@ -28,6 +28,7 @@ import {
   BitHeaderCellComponent,
   BitHeaderRowComponent,
   BitRowComponent,
+  BitTableToolbarComponent,
   BitTableV2Component,
   CopyClickDirective,
   DialogService,
@@ -131,6 +132,7 @@ export type TargetSystemRow = {
     SkeletonComponent,
     SkeletonTextComponent,
     TableModule,
+    BitTableToolbarComponent,
     BitTableV2Component,
     BitColumnComponent,
     BitHeaderCellComponent,
@@ -248,31 +250,27 @@ export class TargetSystemsTabComponent {
   );
 
   protected readonly rowFilter = computed(() => {
-    const text = this.searchText().trim().toLowerCase();
-    const method = this.methodFilterChip()?.value() as string | null | undefined;
-    const kind = this.kindFilterChip()?.value() as TargetSystemKind | null | undefined;
-    const status = this.statusFilterChip()?.value() as string | null | undefined;
-
-    return (row: TargetSystemRow): boolean => {
-      if (
-        text !== "" &&
-        !row.name.toLowerCase().includes(text) &&
-        !(row.kindLabel?.toLowerCase().includes(text) ?? false)
-      ) {
-        return false;
-      }
-      if (method != null && row.methodLabelKey !== method) {
-        return false;
-      }
-      if (kind != null && row.system.kind !== kind) {
-        return false;
-      }
-      if (status != null && row.statusLabelKey !== status) {
-        return false;
-      }
-      return true;
-    };
+    const filter = toTargetSystemFilter({
+      search: this.searchText(),
+      method: this.methodFilterChip()?.value(),
+      kind: this.kindFilterChip()?.value(),
+      status: this.statusFilterChip()?.value(),
+    });
+    return (row: TargetSystemRow): boolean => matchesFilter(row, filter);
   });
+
+  /**
+   * The v2 table's row test. Inside the toolbar the chips and the `bit-search` register with
+   * `bit-table-v2`, so their values arrive as `values` rather than through the chip refs — the
+   * table needs the keyed shape to count each chip's options.
+   *
+   * The term must come from `values.search` alone. {@link searchText} carries the same term (the
+   * projected `bit-search` keeps its form control), and reading both would narrow the rows twice.
+   */
+  protected readonly rowMatchesFilter = (
+    row: TargetSystemRow,
+    values: TargetSystemFilterValues,
+  ): boolean => matchesFilter(row, toTargetSystemFilter(values));
 
   private readonly busyRows = new RowBusyTracker<TargetSystemId>();
 
@@ -525,4 +523,54 @@ export class TargetSystemsTabComponent {
         : this.i18nService.t("unexpectedError");
     this.toastService.showToast({ variant: "error", message });
   }
+}
+
+/**
+ * The toolbar's raw values, keyed by each control's filter key. Untyped per chip because that is
+ * what both hosts hand over: `bit-table-v2` collects whatever each chip reports, and off the flag
+ * the chips are read one at a time through `FilterControl`.
+ */
+type TargetSystemFilterValues = {
+  search?: string;
+  method?: unknown;
+  kind?: unknown;
+  status?: unknown;
+};
+
+/** A toolbar's values normalized into the shape {@link matchesFilter} tests a row against. */
+type TargetSystemFilter = {
+  text: string;
+  methodLabelKey: string | null;
+  kind: TargetSystemKind | null;
+  statusLabelKey: string | null;
+};
+
+function toTargetSystemFilter(values: TargetSystemFilterValues): TargetSystemFilter {
+  return {
+    text: (values.search ?? "").trim().toLowerCase(),
+    methodLabelKey: typeof values.method === "string" ? values.method : null,
+    kind: typeof values.kind === "string" ? (values.kind as TargetSystemKind) : null,
+    statusLabelKey: typeof values.status === "string" ? values.status : null,
+  };
+}
+
+function matchesFilter(row: TargetSystemRow, filter: TargetSystemFilter): boolean {
+  const { text, methodLabelKey, kind, statusLabelKey } = filter;
+  if (
+    text !== "" &&
+    !row.name.toLowerCase().includes(text) &&
+    !(row.kindLabel?.toLowerCase().includes(text) ?? false)
+  ) {
+    return false;
+  }
+  if (methodLabelKey != null && row.methodLabelKey !== methodLabelKey) {
+    return false;
+  }
+  if (kind != null && row.system.kind !== kind) {
+    return false;
+  }
+  if (statusLabelKey != null && row.statusLabelKey !== statusLabelKey) {
+    return false;
+  }
+  return true;
 }
