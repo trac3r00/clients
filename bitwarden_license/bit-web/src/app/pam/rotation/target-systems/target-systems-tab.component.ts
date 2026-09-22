@@ -537,7 +537,6 @@ type TargetSystemFilterValues = {
   status?: unknown;
 };
 
-/** A toolbar's values normalized into the shape {@link matchesFilter} tests a row against. */
 type TargetSystemFilter = {
   text: string;
   methodLabelKey: string | null;
