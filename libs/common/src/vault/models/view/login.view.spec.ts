@@ -52,6 +52,50 @@ describe("LoginView", () => {
         autofillOnPageLoad: true,
       });
     });
+
+    it("should map the decrypted FIDO2 credentials returned by the SDK", () => {
+      jest.spyOn(LoginUriView, "fromSdkLoginUriView").mockImplementation(mockFromSdk);
+
+      const sdkLoginView = {
+        fido2Credentials: [
+          {
+            credentialId: "cred-id",
+            keyType: "public-key",
+            keyAlgorithm: "ECDSA",
+            keyCurve: "P-256",
+            keyValue: "decrypted-key-value",
+            rpId: "bitwarden.com",
+            userHandle: "userHandle",
+            userName: "userName",
+            counter: "2",
+            rpName: "rpName",
+            userDisplayName: "userDisplayName",
+            discoverable: "true",
+            creationDate: "2025-01-01T01:06:40.441Z",
+          },
+        ],
+      } as SdkLoginView;
+
+      const result = LoginView.fromSdkLoginView(sdkLoginView);
+
+      expect(result.fido2Credentials).toHaveLength(1);
+      expect(result.fido2Credentials[0]).toMatchObject({
+        credentialId: "cred-id",
+        keyValue: "decrypted-key-value",
+        rpId: "bitwarden.com",
+        counter: 2,
+        discoverable: true,
+        creationDate: new Date("2025-01-01T01:06:40.441Z"),
+      });
+    });
+
+    it("should default FIDO2 credentials to an empty array", () => {
+      jest.spyOn(LoginUriView, "fromSdkLoginUriView").mockImplementation(mockFromSdk);
+
+      const result = LoginView.fromSdkLoginView({} as SdkLoginView);
+
+      expect(result.fido2Credentials).toEqual([]);
+    });
   });
 
   describe("toSdkLoginView", () => {

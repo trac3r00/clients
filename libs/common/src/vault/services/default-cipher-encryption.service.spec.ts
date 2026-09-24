@@ -4,7 +4,6 @@ import { of } from "rxjs";
 // eslint-disable-next-line no-restricted-imports
 import { SymmetricCryptoKey } from "@bitwarden/legacy-crypto";
 import {
-  Fido2Credential as SdkFido2Credential,
   Cipher as SdkCipher,
   CipherType as SdkCipherType,
   CipherView as SdkCipherView,
@@ -13,7 +12,6 @@ import {
   Fido2CredentialFullView,
 } from "@bitwarden/sdk-internal";
 
-import { mockEnc } from "../../../spec";
 import { UriMatchStrategy } from "../../models/domain/domain-service";
 import { LogService } from "../../platform/abstractions/log.service";
 import { SdkService } from "../../platform/abstractions/sdk/sdk.service";
@@ -102,7 +100,6 @@ describe("DefaultCipherEncryptionService", () => {
         decrypt: jest.fn(),
         decrypt_list: jest.fn(),
         decrypt_list_with_failures: jest.fn(),
-        decrypt_fido2_credentials: jest.fn(),
         move_to_organization: jest.fn(),
       }),
       attachments: jest.fn().mockReturnValue({
@@ -467,79 +464,6 @@ describe("DefaultCipherEncryptionService", () => {
       expect(cipherObj.toSdkCipher).toHaveBeenCalledTimes(1);
       expect(mockSdkClient.vault().ciphers().decrypt).toHaveBeenCalledWith({ id: cipherData.id });
       expect(CipherView.fromSdkCipherView).toHaveBeenCalledWith(sdkCipherView);
-      expect(mockSdkClient.vault().ciphers().decrypt_fido2_credentials).not.toHaveBeenCalled();
-    });
-
-    it("should decrypt FIDO2 credentials if present", async () => {
-      const fido2Credentials = [
-        {
-          credentialId: mockEnc("credentialId"),
-          keyType: mockEnc("keyType"),
-          keyAlgorithm: mockEnc("keyAlgorithm"),
-          keyCurve: mockEnc("keyCurve"),
-          keyValue: mockEnc("keyValue"),
-          rpId: mockEnc("rpId"),
-          userHandle: mockEnc("userHandle"),
-          userName: mockEnc("userName"),
-          counter: mockEnc("2"),
-          rpName: mockEnc("rpName"),
-          userDisplayName: mockEnc("userDisplayName"),
-          discoverable: mockEnc("true"),
-          creationDate: new Date("2023-01-01T12:00:00.000Z"),
-        },
-      ] as unknown as SdkFido2Credential[];
-
-      sdkCipherView.login!.fido2Credentials = fido2Credentials;
-
-      const expectedCipherView: CipherView = {
-        id: cipherId,
-        type: CipherType.Login,
-        name: "test-name",
-        login: {
-          username: "test-username",
-          password: "test-password",
-          fido2Credentials: [],
-        },
-      } as unknown as CipherView;
-
-      const fido2CredentialView: Fido2CredentialView = {
-        credentialId: "credentialId",
-        keyType: "keyType",
-        keyAlgorithm: "keyAlgorithm",
-        keyCurve: "keyCurve",
-        keyValue: "decrypted-key-value",
-        rpId: "rpId",
-        userHandle: "userHandle",
-        userName: "userName",
-        counter: 2,
-        rpName: "rpName",
-        userDisplayName: "userDisplayName",
-        discoverable: true,
-        creationDate: new Date("2023-01-01T12:00:00.000Z"),
-      } as unknown as Fido2CredentialView;
-
-      mockSdkClient.vault().ciphers().decrypt.mockReturnValue(sdkCipherView);
-      mockSdkClient.vault().ciphers().decrypt_fido2_credentials.mockReturnValue(fido2Credentials);
-      mockSdkClient.vault().ciphers().decrypt_fido2_private_key = jest
-        .fn()
-        .mockReturnValue("decrypted-key-value");
-
-      jest.spyOn(CipherView, "fromSdkCipherView").mockReturnValue(expectedCipherView);
-      jest
-        .spyOn(Fido2CredentialView, "fromSdkFido2CredentialView")
-        .mockReturnValueOnce(fido2CredentialView);
-
-      const result = await cipherEncryptionService.decrypt(cipherObj, userId);
-
-      expect(result).toBe(expectedCipherView);
-      expect(result.login?.fido2Credentials).toEqual([fido2CredentialView]);
-      expect(mockSdkClient.vault().ciphers().decrypt_fido2_credentials).toHaveBeenCalledWith(
-        sdkCipherView,
-      );
-      expect(mockSdkClient.vault().ciphers().decrypt_fido2_private_key).toHaveBeenCalledWith(
-        sdkCipherView,
-      );
-      expect(Fido2CredentialView.fromSdkFido2CredentialView).toHaveBeenCalledTimes(1);
     });
   });
 

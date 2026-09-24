@@ -15,7 +15,10 @@ export class AttachmentView implements View {
   fileName?: string;
   key?: SymmetricCryptoKey;
   /**
-   * The SDK returns an encrypted key for the attachment.
+   * The attachment key, still wrapped by the cipher key.
+   *
+   * Only populated by the legacy (non-SDK) decryption path; the SDK returns the attachment
+   * key already decrypted on {@link key}.
    */
   encryptedKey: EncString | undefined;
   private _hasDecryptionError?: boolean;
@@ -76,9 +79,8 @@ export class AttachmentView implements View {
       size: this.size,
       sizeName: this.sizeName,
       fileName: this.fileName,
-      key: this.encryptedKey?.toSdk(),
-      // TODO: PM-23005 - Temporary field, should be removed when encrypted migration is complete
-      decryptedKey: this.key ? this.key.toBase64() : undefined,
+      // The SDK wraps this key under the cipher key when the attachment is encrypted.
+      key: this.key?.toSdk(),
     };
   }
 
@@ -99,9 +101,8 @@ export class AttachmentView implements View {
     view.size = obj.size;
     view.sizeName = obj.sizeName;
     view.fileName = obj.fileName;
-    // TODO: PM-23005 - Temporary field, should be removed when encrypted migration is complete
-    view.key = obj.decryptedKey ? SymmetricCryptoKey.fromString(obj.decryptedKey) : undefined;
-    view.encryptedKey = obj.key ? new EncString(obj.key) : undefined;
+    // The SDK returns the attachment key already unwrapped.
+    view.key = obj.key ? SymmetricCryptoKey.fromSdk(obj.key) : undefined;
     view._hasDecryptionError = failure;
 
     return view;

@@ -24,7 +24,6 @@ import { AttachmentView } from "./attachment.view";
 import { BankAccountView } from "./bank-account.view";
 import { CardView } from "./card.view";
 import { DriversLicenseView } from "./drivers-license.view";
-import { Fido2CredentialView } from "./fido2-credential.view";
 import { FieldView } from "./field.view";
 import { IdentityView } from "./identity.view";
 import { ItemView } from "./item.view";
@@ -300,7 +299,7 @@ export class CipherView implements View, InitializerMetadata {
   /**
    * Creates a CipherView from the SDK CipherView.
    */
-  static fromSdkCipherView(obj: SdkCipherView, sdk?: CiphersClient): CipherView | undefined {
+  static fromSdkCipherView(obj: SdkCipherView): CipherView | undefined {
     if (obj == null) {
       return undefined;
     }
@@ -354,19 +353,6 @@ export class CipherView implements View, InitializerMetadata {
         break;
       case CipherType.Login:
         cipherView.login = obj.login ? LoginView.fromSdkLoginView(obj.login) : new LoginView();
-        if (sdk && obj.login?.fido2Credentials?.length) {
-          const fido2CredentialViews = sdk.decrypt_fido2_credentials(obj);
-          const decryptedKeyValue = sdk.decrypt_fido2_private_key(obj);
-          cipherView.login.fido2Credentials = fido2CredentialViews
-            .map((cred) => {
-              const view = Fido2CredentialView.fromSdkFido2CredentialView(cred);
-              if (view) {
-                view.keyValue = decryptedKeyValue;
-              }
-              return view;
-            })
-            .filter((cred): cred is Fido2CredentialView => !!cred);
-        }
         break;
       case CipherType.SecureNote:
         cipherView.secureNote = obj.secureNote
